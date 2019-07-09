@@ -13,7 +13,7 @@ except ImportError:
     
 
 class CV2VideoWriter:
-    videoFile = None
+    videosource = None
     isWebCam = False
     saveFilename = ""
     size = None
@@ -26,29 +26,25 @@ class CV2VideoWriter:
     writter = None
     capture = None
     initError = None
-    def __init__(self,videofile,codec=None,FPS=20,size=(640,360),FramesToSave=100):
+    channel = None
+    def __init__(self,videosource,codec="MJPG",FPS=30,size=(640,360),FramesToSave=100,channel=1):
         self.initError = False
         self.FPS = FPS
         self.size = size
         self.FramesToSave = FramesToSave
         self.codec = codec
+        self.channel = channel
         self.FilesSaved = []
         self.VideoCodecs = ['MJPG','DIVX','XVID', 'X264', 'WMV1', 'WMV2']
         self.FilesSaved.append(self.saveFilename)
-        if self.codec is not None:
-            try:
-                self.fourcc = cv2.VideoWriter_fourcc(*self.codec)
-                self.writter = cv2.VideoWriter(self.saveFilename,self.fourcc,self.FPS,self.size)
-                self.extention = self.getFileExtention(self.codec)
-            except TypeError:
-                self.initError = True
-                print('Something wrong with the parameters provided by user')
-        if self.extention is not None:
-            self.saveFilename = "../@videosoutput/output_codec_{}".format(self.codec)+str(self.extention)
-        if type(videofile) is int:
+        self.fourcc = cv2.VideoWriter_fourcc(*self.codec)
+        self.writter = cv2.VideoWriter(self.saveFilename,self.fourcc,self.FPS,self.size,self.channel)
+        self.extention = self.getFileExtention(self.codec)
+        self.saveFilename = "../@videosoutput/output_codec_{}".format(self.codec)+str(self.extention)
+        if type(videosource) is int:
             self.isWebCam = True
-        self.videoFile = videofile
-        self.capture = cv2.VideoCapture(self.videoFile)   
+        self.videosource = videosource
+        self.capture = cv2.VideoCapture(self.videosource)   
         
     def test_codecs(self):
         """
@@ -65,7 +61,7 @@ class CV2VideoWriter:
                     self.fourcc = cv2.VideoWriter_fourcc(*self.codec)
                     self.extention = self.getFileExtention(self.codec)
                     self.saveFilename = "../@videosoutput/output_codec_{}".format(self.codec)+str(self.extention)
-                    self.writter = cv2.VideoWriter(self.saveFilename,self.fourcc,self.FPS,self.size)
+                    self.writter = cv2.VideoWriter(self.saveFilename,self.fourcc,self.FPS,self.size,self.channel)
                     ret_file = self.saveFrames()
                     size = self.verify(ret_file)
                     if size==0:
@@ -74,7 +70,7 @@ class CV2VideoWriter:
                         print("Codec: {} | Available: {}".format(self.codec,True))
             else:
                 print("Testing with: {} codec".format(self.codec))
-                self.fourcc = cv2.VideoWriter_fourcc(*self.codec)
+                self.fourcc = cv2.VideoWriter_fourcc(*self.codec,self.channel)
                 ret_file = self.saveFrames()
                 size = self.verify(ret_file)
                 if size==0:
@@ -89,7 +85,7 @@ class CV2VideoWriter:
                 print('could not get frame')
                 break
             frame = cv2.resize(frame,self.size)
-            cv2.imshow("img",frame)
+            #cv2.imshow("img",frame)
             try:
                 self.writter.write(frame)
                 framecount +=1
@@ -110,6 +106,19 @@ class CV2VideoWriter:
         except:
             return 0
         return size
+    def setfilename(self,filename):
+        self.saveFilename = "filename_output_codec_{}".format(self.codec)+str(self.extention)
+    def start_session_frame(self,outputfilename):
+        self.setfilename(outputfilename)
+        self.fourcc = cv2.VideoWriter_fourcc(*self.codec)
+        self.writter = cv2.VideoWriter(self.saveFilename,self.fourcc,self.FPS,self.size,self.channel)
+    def save_session_frame(self,frame):
+        frame = cv2.resize(frame,(640,360))
+        self.writter.write(frame)
+    def end_session(self):
+        self.capture.release()
+        self.writter.release()
+        return self.saveFilename
     def getFileExtention(self,codecname):
         codecname = str(codecname)
         if codecname=="DIVX" or codecname=="WMV1" or codecname=="WMV2" or codecname=="XVID" or codecname=="MJPG":
